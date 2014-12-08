@@ -366,7 +366,11 @@ class WP_FFPC_Backend {
 					foreach ( $terms as $term ) {
 						/* get the permalink for the term */
 						$link = get_term_link ( $term->slug, $taxonomy->name );
-						/* add to container */
+                                                if (!is_string($link)) {
+                                                    $this->log("Term returned as type ".  gettype($link). ", not a string.", LOG_WARNING);
+                                                    continue;
+                                                }
+                                                /* add to container */
 						$links[ $link ] = true;
 						/* remove the taxonomy name from the link, lots of plugins remove this for SEO, it's better to include them than leave them out
 						   in worst case, we cache some 404 as well
