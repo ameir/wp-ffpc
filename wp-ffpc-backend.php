@@ -20,7 +20,6 @@ include_once 'wp-common/plugin_utils.php';
  */
 class WP_FFPC_Backend
 {
-
     const host_separator = ',';
     const port_separator = ':';
 
@@ -270,29 +269,34 @@ class WP_FFPC_Backend
 
                 return false;
             }
+            $to_clear[] = $permalink;
 
-            /*
-             * It is possible that post/page is paginated with <!--nextpage-->
-             * Wordpress doesn't seem to expose the number of pages via API.
-             * So let's just count it.
-             */
-            $content_post = get_post($post_id);
-            $content = $content_post->post_content;
-            $number_of_pages = 1 + (int) preg_match_all('/<!--nextpage-->/', $content, $matches);
+            // handle pagination
+            if (isset($multipage) && $multipage) {
+                /*
+                 * It is possible that post/page is paginated with <!--nextpage-->
+                 * Wordpress doesn't seem to expose the number of pages via API.
+                 * So let's just count it.
+                 */
+                $content_post = get_post($post_id);
+                $content = $content_post->post_content;
+                $number_of_pages = 1 + (int) preg_match_all('/<!--nextpage-->/', $content, $matches);
 
-            $current_page_id = '';
-            do {
-                /* urimap */
-                $urimap = self::parse_urimap($permalink, $this->urimap);
-                $urimap['$request_uri'] = $urimap['$request_uri'] . ($current_page_id ? $current_page_id . '/' : '');
+                $current_page_id = '';
+                do {
+                    /* urimap */
+                    $urimap = self::parse_urimap($permalink, $this->urimap);
+                    $urimap['$request_uri'] = $urimap['$request_uri'] . ($current_page_id ? $current_page_id . '/' : '');
 
-                $clear_cache_key = self::map_urimap($urimap, $this->options['key']);
+                    $clear_cache_key = self::map_urimap($urimap, $this->options['key']);
 
-                $to_clear[] = $clear_cache_key;
+                    $to_clear[] = $clear_cache_key;
 
-                $current_page_id = 1 + (int) $current_page_id;
-            } while ($number_of_pages > 1 && $current_page_id <= $number_of_pages);
+                    $current_page_id = 1 + (int) $current_page_id;
+                } while ($number_of_pages > 1 && $current_page_id <= $number_of_pages);
+            }
         }
+        $this->extract_path_from_urls($to_clear);
 
         /* Hook to custom clearing array. */
         $to_clear = apply_filters('wp_ffpc_to_clear_array', $to_clear, $post_id);
@@ -310,6 +314,14 @@ class WP_FFPC_Backend
         /* run clear */
         $internal = $this->proxy('clear');
         $this->$internal($to_clear);
+    }
+
+    public function extract_path_from_urls(&$urls)
+    {
+        foreach ($urls as &$url) {
+            $url = $this->parse_urimap($url);
+            $url = $url['$request_uri'];
+        }
     }
 
     /**
@@ -367,7 +379,7 @@ class WP_FFPC_Backend
         // purge author page
         $links[] = $this->get_post_author_url($post_id);
 
-        // purge front page 
+        // purge front page
         $links[] = $this->get_site_url();
 
         /* switch back to original site if we navigated away */
