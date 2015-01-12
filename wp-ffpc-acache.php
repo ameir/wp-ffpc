@@ -48,14 +48,12 @@ if (function_exists('is_multisite') && stripos($wp_ffpc_uri, '/files/') && is_mu
 if (!empty($wp_ffpc_config['network'])) {
     $wp_ffpc_config = $wp_ffpc_config['network'];
 }
-/* check if config is active for site : use site config */
-elseif (!empty($wp_ffpc_config[$_SERVER['HTTP_HOST']])) {
-    $wp_ffpc_config = $wp_ffpc_config[$_SERVER['HTTP_HOST']];
-}
-/* plugin config not found :( */
-else {
-    return false;
-}
+/* check if config is active for site : use site config */ elseif (!empty($wp_ffpc_config[$_SERVER['HTTP_HOST']])) {
+     $wp_ffpc_config = $wp_ffpc_config[$_SERVER['HTTP_HOST']];
+ }
+/* plugin config not found :( */ else {
+     return false;
+ }
 
 /* check for cookies that will make us not cache the content, like logged in WordPress cookie */
 if (isset($wp_ffpc_config['nocache_cookies']) && !empty($wp_ffpc_config['nocache_cookies'])) {
@@ -138,7 +136,7 @@ if (isset($wp_ffpc_values['meta']['status']) && $wp_ffpc_values['meta']['status'
 
 /* server redirect cache */
 if (isset($wp_ffpc_values['meta']['redirect']) && $wp_ffpc_values['meta']['redirect']) {
-    header('Location: '.$wp_ffpc_values['meta']['redirect']);
+    header('Location: ' . $wp_ffpc_values['meta']['redirect']);
     /* cut the connection as fast as possible */
     flush();
     die();
@@ -160,7 +158,7 @@ if (array_key_exists("HTTP_IF_MODIFIED_SINCE", $_SERVER) && !empty($wp_ffpc_valu
 
 /* if we reach this point it means data was found & correct, serve it */
 if (!empty($wp_ffpc_values['meta']['mime'])) {
-    header('Content-Type: '.$wp_ffpc_values['meta']['mime']);
+    header('Content-Type: ' . $wp_ffpc_values['meta']['mime']);
 }
 
 /* don't allow browser caching of page */
@@ -168,26 +166,26 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0, post-chec
 header('Pragma: no-cache');
 
 /* expire at this very moment */
-header('Expires: '.gmdate("D, d M Y H:i:s", time())." GMT");
+header('Expires: ' . gmdate("D, d M Y H:i:s", time()) . " GMT");
 
 /* if shortlinks were set */
 if (!empty($wp_ffpc_values['meta']['shortlink'])) {
-    header('Link:<'.$wp_ffpc_values['meta']['shortlink'].'>; rel=shortlink');
+    header('Link:<' . $wp_ffpc_values['meta']['shortlink'] . '>; rel=shortlink');
 }
 
 /* if last modifications were set (for posts & pages) */
 if (!empty($wp_ffpc_values['meta']['lastmodified'])) {
-    header('Last-Modified: '.gmdate("D, d M Y H:i:s", $wp_ffpc_values['meta']['lastmodified'])." GMT");
+    header('Last-Modified: ' . gmdate("D, d M Y H:i:s", $wp_ffpc_values['meta']['lastmodified']) . " GMT");
 }
 
 /* pingback urls, if existx */
 if (!empty($wp_ffpc_values['meta']['pingback']) && $wp_ffpc_config['pingback_header']) {
-    header('X-Pingback: '.$wp_ffpc_values['meta']['pingback']);
+    header('X-Pingback: ' . $wp_ffpc_values['meta']['pingback']);
 }
 
 /* for debugging */
 if ($wp_ffpc_config['response_header']) {
-    header('X-Cache-Engine: WP-FFPC with '.$wp_ffpc_config['cache_type'].' via PHP');
+    header('X-Cache-Engine: WP-FFPC with ' . $wp_ffpc_config['cache_type'] . ' via PHP');
 }
 
 /* HTML data */
@@ -277,7 +275,7 @@ function wp_ffpc_callback($buffer)
 
     if ($meta['type'] != 'unknown') {
         /* check if caching is disabled for page type */
-        $nocache_key = 'nocache_'.$meta['type'];
+        $nocache_key = 'nocache_' . $meta['type'];
 
         /* don't cache if prevented by rule */
         if ($wp_ffpc_config[$nocache_key] == 1) {
@@ -302,7 +300,7 @@ function wp_ffpc_callback($buffer)
     }
 
     /* set mimetype */
-    $meta['mime'] = $meta['mime'].$wp_ffpc_config['charset'];
+    $meta['mime'] = $meta['mime'] . $wp_ffpc_config['charset'];
 
     /* try if post is available
       if made with archieve, last listed post can make this go bad
@@ -332,7 +330,7 @@ function wp_ffpc_callback($buffer)
         $mtime = explode(" ", microtime());
         $wp_ffpc_gentime = ($mtime[1] + $mtime[0]) - $wp_ffpc_gentime;
 
-        $insertion = "\n<!-- \nWP-FFPC \n\tcache engine: ".$wp_ffpc_config['cache_type']."\n\tpage generation time: ".round($wp_ffpc_gentime, 3)." seconds\n\tgeneraton UNIX timestamp: ".time()."\n\tgeneraton date: ".date('c')."\n\tserver: ".$_SERVER['SERVER_ADDR']."\n-->\n";
+        $insertion = "\n<!-- \nWP-FFPC \n\tcache engine: " . $wp_ffpc_config['cache_type'] . "\n\tpage generation time: " . round($wp_ffpc_gentime, 3) . " seconds\n\tgeneraton UNIX timestamp: " . time() . "\n\tgeneraton date: " . date('c') . "\n\tserver: " . $_SERVER['SERVER_ADDR'] . "\n-->\n";
         $index = stripos($buffer, '</body>');
 
         $buffer = substr_replace($buffer, $insertion, $index, 0);
