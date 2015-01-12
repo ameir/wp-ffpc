@@ -1,9 +1,5 @@
 <?php
 
-if (class_exists('WP_FFPC_Backend')) {
-    return;
-}
-
 include_once 'wp-common/plugin_utils.php';
 
 /**
