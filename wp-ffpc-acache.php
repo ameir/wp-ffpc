@@ -330,7 +330,7 @@ function wp_ffpc_callback($buffer)
         $mtime = explode(" ", microtime());
         $wp_ffpc_gentime = ($mtime[1] + $mtime[0]) - $wp_ffpc_gentime;
 
-        $insertion = "\n<!-- \nWP-FFPC \n\tcache engine: " . $wp_ffpc_config['cache_type'] . "\n\tpage generation time: " . round($wp_ffpc_gentime, 3) . " seconds\n\tgeneraton UNIX timestamp: " . time() . "\n\tgeneraton date: " . date('c') . "\n\tserver: " . $_SERVER['SERVER_ADDR'] . "\n-->\n";
+        $insertion = "\n<!-- \nWP-FFPC \n\tcache engine: " . $wp_ffpc_config['cache_type'] . "\n\tpage generation time: " . round($wp_ffpc_gentime, 3) . " seconds\n\tgeneration UNIX timestamp: " . time() . "\n\tgeneration date: " . date('c') . "\n\tserver: " . $_SERVER['SERVER_ADDR'] . "\n-->\n";
         $index = stripos($buffer, '</body>');
 
         $buffer = substr_replace($buffer, $insertion, $index, 0);
