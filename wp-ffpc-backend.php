@@ -20,6 +20,7 @@ include_once 'wp-common/plugin_utils.php';
  */
 class WP_FFPC_Backend
 {
+
     const host_separator = ',';
     const port_separator = ':';
 
@@ -240,7 +241,7 @@ class WP_FFPC_Backend
         /* clear taxonomies if settings requires it */
         if ($this->options['invalidation_method'] == 2) {
             /* this will only clear the current blog's entries */
-            $this->taxonomy_links($to_clear);
+            $this->taxonomy_links($post_id, $to_clear);
         }
 
         /* clear pasts index page if settings requires it */
@@ -296,13 +297,11 @@ class WP_FFPC_Backend
         /* Hook to custom clearing array. */
         $to_clear = apply_filters('wp_ffpc_to_clear_array', $to_clear, $post_id);
 
-        /* clear all feeds as well */
-        foreach ($to_clear as $link) {
-            $to_clear[] = $link . 'feed';
-        }
-
-        /* add data & meta prefixes */
         foreach ($to_clear as &$link) {
+            /* clear all feeds */
+            $to_clear[] = $link . 'feed';
+
+            /* add data & meta prefixes */
             $to_clear[] = $this->options['prefix_meta'] . $link;
             $to_clear[] = $this->options['prefix_data'] . $link;
             unset($link);
@@ -338,61 +337,38 @@ class WP_FFPC_Backend
     /**
      * to collect all permalinks of all taxonomy terms used in invalidation & precache
      *
+     * @param int   $post_id ID of the post being purged
      * @param array &$links Passed by reference array that has to be filled up with the links
      * @param mixed $site Site ID or false; used in WordPress Network
      *
      */
-    public function taxonomy_links(&$links, $site = false)
+    public function taxonomy_links($post_id, &$links, $site = false)
     {
         if ($site !== false) {
             $current_blog = get_current_blog_id();
             switch_to_blog($site);
-
             $url = get_blog_option($site, 'siteurl');
             if (substr($url, -1) !== '/') {
                 $url = $url . '/';
             }
-
             $links[] = $url;
         }
-
-        /* we're only interested in public taxonomies */
-        $args = array(
-            'public' => true,
-        );
-
-        /* get taxonomies as objects */
-        $taxonomies = get_taxonomies($args, 'objects');
-
-        if (!empty($taxonomies)) {
-            foreach ($taxonomies as $taxonomy) {
-                /* reset array, just in case */
-                $terms = array();
-
-                /* get all the terms for this taxonomy, only if not empty */
-                $sargs = array(
-                    'hide_empty' => true,
-                    'fields' => 'all',
-                    'hierarchical' => false,
-                );
-                $terms = get_terms($taxonomy->name, $sargs);
-
-                if (!empty($terms)) {
-                    foreach ($terms as $term) {
-                        /* get the permalink for the term */
-                        $link = get_term_link($term->slug, $taxonomy->name);
-                        /* add to container */
-                        $links[] = $link;
-                        /* remove the taxonomy name from the link, lots of plugins remove this for SEO, it's better to include them than leave them out
-                          in worst case, we cache some 404 as well
-                         */
-                        $link = str_replace('/' . $taxonomy->rewrite['slug'], '', $link);
-                        /* add to container */
-                        $links[] = $link;
-                    }
-                }
+        $taxonomies = get_post_taxonomies($post_id);
+        $terms = wp_get_post_terms($post_id, $taxonomies);
+        foreach ($terms as $term) {
+            $link = get_term_link($term);
+            if (!is_string($link)) {
+                $this->log("Term link returned as type " . gettype($link) . ", not a string.", LOG_WARNING);
+                continue;
             }
+            $links[] = $link;
         }
+
+        // purge author page
+        $links[] = $this->get_post_author_url($post_id);
+
+        // purge front page 
+        $links[] = $this->get_site_url();
 
         /* switch back to original site if we navigated away */
         if ($site !== false) {
