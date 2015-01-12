@@ -179,21 +179,6 @@ if (!class_exists('WP_FFPC')) :
             /* initiate backend */
             $this->backend = new WP_FFPC_Backend($this->options);
 
-            /* get all available post types *
-              $post_types = get_post_types( ); */
-
-            /* cache invalidation hooks */
-            add_action('transition_post_status', array(&$this->backend, 'clear_ng'), 10, 3);
-            /*
-              foreach ( $post_types as $post_type ) {
-              add_action( 'new_to_publish_' .$post_type , array( &$this->backend , 'clear' ), 0 );
-              add_action( 'draft_to_publish' .$post_type , array( &$this->backend , 'clear' ), 0 );
-              add_action( 'pending_to_publish' .$post_type , array( &$this->backend , 'clear' ), 0 );
-              add_action( 'private_to_publish' .$post_type , array( &$this->backend , 'clear' ), 0 );
-              add_action( 'publish_' . $post_type , array( &$this->backend , 'clear' ), 0 );
-              }
-             */
-
             /* comments invalidation hooks */
             if ($this->options['comments_invalidate']) {
                 add_action('comment_post', array(&$this->backend, 'clear'), 0);
@@ -208,7 +193,7 @@ if (!class_exists('WP_FFPC')) :
             /* invalidation on some other ocasions as well */
             add_action('switch_theme', array(&$this->backend, 'clear'), 0);
             add_action('deleted_post', array(&$this->backend, 'clear'), 0);
-            add_action('edit_post', array(&$this->backend, 'clear'), 0);
+            add_action('save_post', array(&$this->backend, 'clear'), 0);
 
             /* add filter for catching canonical redirects */
             if (WP_CACHE) {
