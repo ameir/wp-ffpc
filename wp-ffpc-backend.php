@@ -285,7 +285,7 @@ if (!class_exists('WP_FFPC_Backend')) :
 
                     $clear_cache_key = self::map_urimap($urimap, $this->options['key']);
 
-                    $to_clear[$clear_cache_key] = true;
+                    $to_clear[] = $clear_cache_key;
 
                     $current_page_id = 1 + (int) $current_page_id;
                 } while ($number_of_pages > 1 && $current_page_id <= $number_of_pages);
@@ -294,16 +294,16 @@ if (!class_exists('WP_FFPC_Backend')) :
             /* Hook to custom clearing array. */
             $to_clear = apply_filters('wp_ffpc_to_clear_array', $to_clear, $post_id);
 
-            foreach ($to_clear as $link => $dummy) {
-                /* clear all feeds as well */
-                $to_clear[$link . 'feed'] = true;
+            /* clear all feeds as well */
+            foreach ($to_clear as $link) {
+                $to_clear[] = $link . 'feed';
             }
 
             /* add data & meta prefixes */
-            foreach ($to_clear as $link => $dummy) {
-                unset($to_clear [$link]);
-                $to_clear[$this->options['prefix_meta'] . $link] = true;
-                $to_clear[$this->options['prefix_data'] . $link] = true;
+            foreach ($to_clear as &$link) {
+                $to_clear[] = $this->options['prefix_meta'] . $link;
+                $to_clear[] = $this->options['prefix_data'] . $link;
+                unset($link);
             }
 
             /* run clear */
@@ -351,7 +351,7 @@ if (!class_exists('WP_FFPC_Backend')) :
                     $url = $url . '/';
                 }
 
-                $links[$url] = true;
+                $links[] = $url;
             }
 
             /* we're only interested in public taxonomies */
@@ -380,13 +380,13 @@ if (!class_exists('WP_FFPC_Backend')) :
                             /* get the permalink for the term */
                             $link = get_term_link($term->slug, $taxonomy->name);
                             /* add to container */
-                            $links[$link] = true;
+                            $links[] = $link;
                             /* remove the taxonomy name from the link, lots of plugins remove this for SEO, it's better to include them than leave them out
                               in worst case, we cache some 404 as well
                              */
                             $link = str_replace('/' . $taxonomy->rewrite['slug'], '', $link);
                             /* add to container */
-                            $links[$link] = true;
+                            $links[] = $link;
                         }
                     }
                 }
@@ -580,12 +580,8 @@ if (!class_exists('WP_FFPC_Backend')) :
          */
         private function apc_clear(&$keys)
         {
-            /* make an array if only one string is present, easier processing */
-            if (!is_array($keys)) {
-                $keys = array($keys => true);
-            }
-
-            foreach ($keys as $key => $dummy) {
+            $keys = (array) $keys;
+            foreach ($keys as $key) {
                 if (!apc_delete($key)) {
                     $this->log(sprintf(__translate__('Failed to delete APC entry: %s', $this->plugin_constant), $key), LOG_WARNING);
                     //throw new Exception ( __translate__('Deleting APC entry failed with key ', $this->plugin_constant ) . $key );
@@ -674,12 +670,8 @@ if (!class_exists('WP_FFPC_Backend')) :
          */
         private function apcu_clear(&$keys)
         {
-            /* make an array if only one string is present, easier processing */
-            if (!is_array($keys)) {
-                $keys = array($keys => true);
-            }
-
-            foreach ($keys as $key => $dummy) {
+            $keys = (array) $keys;
+            foreach ($keys as $key) {
                 if (!apcu_delete($key)) {
                     $this->log(sprintf(__translate__('Failed to delete APC entry: %s', $this->plugin_constant), $key), LOG_WARNING);
                     //throw new Exception ( __translate__('Deleting APC entry failed with key ', $this->plugin_constant ) . $key );
@@ -835,12 +827,8 @@ if (!class_exists('WP_FFPC_Backend')) :
          */
         private function memcached_clear(&$keys)
         {
-            /* make an array if only one string is present, easier processing */
-            if (!is_array($keys)) {
-                $keys = array($keys => true);
-            }
-
-            foreach ($keys as $key => $dummy) {
+            $keys = (array) $keys;
+            foreach ($keys as $key) {
                 $kresult = $this->connection->delete($key);
 
                 if ($kresult === false) {
@@ -969,12 +957,8 @@ if (!class_exists('WP_FFPC_Backend')) :
          */
         private function memcache_clear(&$keys)
         {
-            /* make an array if only one string is present, easier processing */
-            if (!is_array($keys)) {
-                $keys = array($keys => true);
-            }
-
-            foreach ($keys as $key => $dummy) {
+            $keys = (array) $keys;
+            foreach ($keys as $key) {
                 $kresult = $this->connection->delete($key);
 
                 if ($kresult === false) {
@@ -1133,11 +1117,7 @@ if (!class_exists('WP_FFPC_Backend')) :
          */
         private function redis_clear(&$keys)
         {
-            /* make an array if only one string is present, easier processing */
-            if (!is_array($keys)) {
-                $keys = array($keys => true);
-            }
-
+            $keys = (array) $keys;
             $kresults = $this->connection->delete($keys);
 
             foreach ($kresults as $key => $value) {
