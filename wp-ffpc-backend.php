@@ -297,14 +297,14 @@ class WP_FFPC_Backend
         /* Hook to custom clearing array. */
         $to_clear = apply_filters('wp_ffpc_to_clear_array', $to_clear, $post_id);
 
-        foreach ($to_clear as &$link) {
+        foreach ($to_clear as $id => $link) {
             /* clear all feeds */
             $to_clear[] = $link . 'feed';
 
             /* add data & meta prefixes */
             $to_clear[] = $this->options['prefix_meta'] . $link;
             $to_clear[] = $this->options['prefix_data'] . $link;
-            unset($link);
+            unset($to_clear[$id]);
         }
 
         /* run clear */
@@ -318,6 +318,28 @@ class WP_FFPC_Backend
             $url = $this->parse_urimap($url);
             $url = $url['$request_uri'];
         }
+        unset($url);
+    }
+
+    public function get_site_url()
+    {
+        return home_url('/');
+    }
+
+    public function get_post_author_id($post_id)
+    {
+        return get_post_field('post_author', $post_id);
+    }
+
+    public function get_author_url($author_id)
+    {
+        return get_author_posts_url($author_id);
+    }
+
+    public function get_post_author_url($post_id)
+    {
+        $author_id = $this->get_post_author_id($post_id);
+        return $this->get_author_url($author_id);
     }
 
     /**
