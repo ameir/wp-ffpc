@@ -29,11 +29,6 @@ if (defined('SID') && SID != '') {
 /* request uri */
 $wp_ffpc_uri = $_SERVER['REQUEST_URI'];
 
-/* no cache for uri with query strings, things usually go bad that way */
-if (isset($wp_ffpc_config['nocache_dyn']) && !empty($wp_ffpc_config['nocache_dyn']) && stripos($wp_ffpc_uri, '?') !== false) {
-    return false;
-}
-
 /* no cache for robots.txt */
 if (stripos($wp_ffpc_uri, 'robots.txt')) {
     return false;
@@ -47,13 +42,18 @@ if (function_exists('is_multisite') && stripos($wp_ffpc_uri, '/files/') && is_mu
 /* check if config is network active: use network config */
 if (!empty($wp_ffpc_config['network'])) {
     $wp_ffpc_config = $wp_ffpc_config['network'];
+} elseif (!empty($wp_ffpc_config[$_SERVER['HTTP_HOST']])) {
+    /* check if config is active for site : use site config */
+    $wp_ffpc_config = $wp_ffpc_config[$_SERVER['HTTP_HOST']];
+} else {
+    /* plugin config not found :( */
+    return false;
 }
-/* check if config is active for site : use site config */ elseif (!empty($wp_ffpc_config[$_SERVER['HTTP_HOST']])) {
-     $wp_ffpc_config = $wp_ffpc_config[$_SERVER['HTTP_HOST']];
- }
-/* plugin config not found :( */ else {
-     return false;
- }
+
+/* no cache for uri with query strings, things usually go bad that way */
+if (isset($wp_ffpc_config['nocache_dyn']) && $wp_ffpc_config['nocache_dyn'] && strpos($wp_ffpc_uri, '?') !== false) {
+    return false;
+}
 
 /* check for cookies that will make us not cache the content, like logged in WordPress cookie */
 if (isset($wp_ffpc_config['nocache_cookies']) && !empty($wp_ffpc_config['nocache_cookies'])) {
@@ -355,5 +355,4 @@ function wp_ffpc_callback($buffer)
     /* echoes HTML out */
     return $buffer;
 }
-
 /* * * END GENERATING CACHE ENTRY ** */;
