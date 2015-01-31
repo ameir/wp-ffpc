@@ -49,6 +49,7 @@ if (!class_exists('WP_FFPC')) :
         private $global_saved = false;
         private $acache_worker = '';
         private $acache = '';
+        private $config = '';
         private $nginx_sample = '';
         private $acache_backend = '';
         private $button_flush;
@@ -88,6 +89,8 @@ if (!class_exists('WP_FFPC')) :
             $this->acache_worker = $this->plugin_dir . $this->plugin_constant . '-acache.php';
             /* WordPress advanced-cache.php file location */
             $this->acache = WP_CONTENT_DIR . '/advanced-cache.php';
+            /* config file */
+            $this->config = __DIR__ . '/config.php';
             /* nginx sample config file */
             $this->nginx_sample = $this->plugin_dir . $this->plugin_constant . '-nginx-sample.conf';
             /* backend driver file */
@@ -170,6 +173,31 @@ if (!class_exists('WP_FFPC')) :
             $this->select_schedules = $schedules;
         }
 
+        protected function plugin_options_read()
+        {
+            $options = $this->read_options() + $this->defaults;
+
+            /* removed unused keys, rare, but possible */
+            foreach (@array_keys($options) as $key) {
+                if (!@array_key_exists($key, $this->defaults)) {
+                    unset($options[$key]);
+                }
+            }
+
+            /* any additional read hook */
+            $this->plugin_extend_options_read($options);
+
+            $this->options = $options;
+        }
+
+        public function read_options()
+        {
+            if (!file_exists($this->config)) {
+                $this->log("File {$this->config} not found.");
+                return array();
+            }
+            return include_once $this->config;
+        }
         /**
          * additional init, steps that needs the plugin options
          *
@@ -218,12 +246,12 @@ if (!class_exists('WP_FFPC')) :
                 $this->errors['no_global_saved'] = __("Plugin settings are not yet saved for the site, please save settings!", $this->plugin_constant) . $settings_link;
             }
 
-            if (!file_exists($this->acache)) {
-                $this->errors['no_acache_saved'] = __("Advanced cache file is yet to be generated, please save settings!", $this->plugin_constant) . $settings_link;
+            if (!file_exists($this->config)) {
+                $this->errors['no_acache_saved'] = __("Configuration file is yet to be generated, please save settings!", $this->plugin_constant) . $settings_link;
             }
 
-            if (file_exists($this->acache) && !is_writable($this->acache)) {
-                $this->errors['no_acache_write'] = __("Advanced cache file is not writeable!<br />Please change the permissions on the file: ", $this->plugin_constant) . $this->acache;
+            if (file_exists($this->config) && !is_writable($this->config)) {
+                $this->errors['no_acache_write'] = __("Configuration file is not writeable!<br />Please change the permissions on the file: ", $this->plugin_constant) . $this->config;
             }
 
             foreach ($this->valid_cache_type as $backend => $status) {
@@ -272,11 +300,6 @@ if (!class_exists('WP_FFPC')) :
         {
             /* delete advanced-cache.php file */
             unlink($this->acache);
-
-            /* delete site settings */
-            if ($delete_options) {
-                $this->plugin_options_delete();
-            }
         }
 
         /**
@@ -1022,7 +1045,7 @@ if (!class_exists('WP_FFPC')) :
             /* create the to-be-included configuration for advanced-cache.php */
             $this->update_global_config();
 
-            /* create advanced cache file, needed only once or on activation, because there could be lefover advanced-cache.php from different plugins */
+            /* create config file, needed only once or on activation */
             if (!$activating) {
                 $this->deploy_advanced_cache();
             }
@@ -1033,12 +1056,6 @@ if (!class_exists('WP_FFPC')) :
          */
         public function plugin_extend_options_read(&$options)
         {
-            /* if ( strstr( $this->options['nocache_url']), '^wp-'  )wp_login_url()
-              $this->options['nocache_url'] = */
-
-            /* read the global options, network compatibility */
-            $this->global_config = get_site_option($this->global_option);
-
             /* check if current site present in global config */
             if (!empty($this->global_config[$this->global_config_key])) {
                 $this->global_saved = true;
@@ -1088,10 +1105,10 @@ if (!class_exists('WP_FFPC')) :
                 /* updating from version <= 0.4.x */
                 if (!empty($options['host'])) {
                     $options['hosts'] = $options['host'] . ':' . $options['port'];
+                } elseif (is_array($options) && array_key_exists($this->global_config_key, $options)) {
+                    /* migrating from version 0.6.x */
+                    $options = $options[$this->global_config_key];
                 }
-                /* migrating from version 0.6.x */ elseif (is_array($options) && array_key_exists($this->global_config_key, $options)) {
-     $options = $options[$this->global_config_key];
- }
 
                 /* renamed options */
                 if (isset($options['syslog'])) {
@@ -1104,35 +1121,25 @@ if (!class_exists('WP_FFPC')) :
         }
 
         /**
-         * advanced-cache.php creator function
+         * configuration file creator function
          *
          */
         private function deploy_advanced_cache()
         {
-            /* in case advanced-cache.php was already there, remove it */
-            if (@file_exists($this->acache)) {
-                unlink($this->acache);
-            }
-
-            /* is deletion was unsuccessful, die, we have no rights to do that, fail */
-            if (@file_exists($this->acache)) {
-                return false;
-            }
-
-            /* if no active site left no need for advanced cache :( */
+            /* if no active site left no need for config :( */
             if (empty($this->global_config)) {
                 return false;
             }
-
+            /* copy advanced-cache.php if it's not in place */
+            if (!file_exists($this->acache)) {
+                copy(__DIR__ . '/advanced-cache.php', $this->acache);
+            }
             /* add the required includes and generate the needed code */
-            $string[] = "<?php";
-            $string[] = self::global_config_var . ' = ' . var_export($this->global_config, true) . ';';
-            //$string[] = "include_once ('" . $this->acache_backend . "');";
-            $string[] = "include_once ('" . $this->acache_worker . "');";
-            $string[] = "?>";
+            $string = "<?php\n";
+            $string .= 'return ' . var_export($this->global_config[$this->global_config_key], true) . ';';
 
             /* write the file and start caching from this point */
-            return file_put_contents($this->acache, implode("\n", $string));
+            return file_put_contents($this->config, $string);
         }
 
         /**
@@ -1216,11 +1223,8 @@ if (!class_exists('WP_FFPC')) :
                 $this->global_config[$this->global_config_key] = $this->options;
             }
 
-            /* deploy advanced-cache.php */
+            /* deploy configuration file */
             $this->deploy_advanced_cache();
-
-            /* save options to database */
-            update_site_option($this->global_option, $this->global_config);
         }
 
         /**

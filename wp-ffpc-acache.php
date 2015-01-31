@@ -3,13 +3,13 @@
 /**
  * advanced cache worker of WordPress plugin WP-FFPC
  */
-/* check for WP cache enabled */
-if (!WP_CACHE) {
+if (!file_exists(__DIR__ . './config.php')) {
     return false;
 }
 
 /* check for config */
-if (!isset($wp_ffpc_config)) {
+$wp_ffpc_config = include_once __DIR__ . './config.php';
+if (!is_array($wp_ffpc_config)) {
     return false;
 }
 
