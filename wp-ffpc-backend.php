@@ -98,7 +98,6 @@ class WP_FFPC_Backend
     {
         return str_replace(array_keys($urimap), $urimap, $subject);
     }
-
     /*     * ********************* PUBLIC / PROXY FUNCTIONS ********************** */
 
     /**
@@ -298,14 +297,14 @@ class WP_FFPC_Backend
         $to_clear = apply_filters('wp_ffpc_to_clear_array', $to_clear, $post_id);
 
         foreach ($to_clear as $id => $link) {
-            /* clear all feeds */
-            $to_clear[] = $link . 'feed';
-
-            /* add data & meta prefixes */
+            unset($to_clear[$id]);
             $to_clear[] = $this->options['prefix_meta'] . $link;
             $to_clear[] = $this->options['prefix_data'] . $link;
-            unset($to_clear[$id]);
+            /* add feeds */
+            $to_clear[] = $this->options['prefix_meta'] . $link . 'feed';
+            $to_clear[] = $this->options['prefix_data'] . $link . 'feed';
         }
+        $this->log("Clearing posts: " . print_r($to_clear, true), LOG_DEBUG);
 
         /* run clear */
         $internal = $this->proxy('clear');
@@ -508,7 +507,6 @@ class WP_FFPC_Backend
             $this->utilities->log($this->plugin_constant, $message, $log_level);
         }
     }
-
     /*     * ********************* END PUBLIC FUNCTIONS ********************** */
     /*     * ********************* APC FUNCTIONS ********************** */
 
@@ -598,7 +596,6 @@ class WP_FFPC_Backend
             }
         }
     }
-
     /*     * ********************* END APC FUNCTIONS ********************** */
     /*     * ********************* APCu FUNCTIONS ********************** */
 
@@ -688,7 +685,6 @@ class WP_FFPC_Backend
             }
         }
     }
-
     /*     * ********************* END APC FUNCTIONS ********************** */
 
     /*     * ********************* MEMCACHED FUNCTIONS ********************** */
@@ -848,7 +844,6 @@ class WP_FFPC_Backend
             }
         }
     }
-
     /*     * ********************* END MEMCACHED FUNCTIONS ********************** */
 
     /*     * ********************* MEMCACHE FUNCTIONS ********************** */
@@ -976,7 +971,6 @@ class WP_FFPC_Backend
             }
         }
     }
-
     /*     * ********************* END MEMCACHE FUNCTIONS ********************** */
 
     /*     * ********************* REDIS FUNCTIONS ********************** */
@@ -1132,6 +1126,5 @@ class WP_FFPC_Backend
             $this->log(sprintf(__translate__('entry deleted: %s', $this->plugin_constant), $value));
         }
     }
-
     /*     * ********************* END REDIS FUNCTIONS ********************** */
 }
