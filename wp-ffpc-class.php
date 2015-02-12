@@ -222,6 +222,7 @@ if (!class_exists('WP_FFPC')) :
             add_action('switch_theme', array(&$this->backend, 'clear'), 0);
             add_action('deleted_post', array(&$this->backend, 'clear'), 0);
             add_action('save_post', array(&$this->backend, 'clear'), 0);
+            add_action('future_to_publish', array(&$this->backend, 'clear'), 0);
 
             /* add filter for catching canonical redirects */
             if (WP_CACHE) {
